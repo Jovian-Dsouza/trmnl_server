@@ -217,6 +217,7 @@ export const timezones = [
 	{ value: "Asia/Singapore", label: "Singapore (SGT)", region: "Asia" },
 	{ value: "Asia/Dubai", label: "Dubai (GST)", region: "Asia" },
 	{ value: "Asia/Hong_Kong", label: "Hong Kong (HKT)", region: "Asia" },
+	{ value: "Asia/Kolkata", label: "India (IST)", region: "Asia" },
 
 	// Australia & Pacific
 	{
