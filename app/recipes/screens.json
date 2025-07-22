@@ -99,6 +99,27 @@
 		"version": "0.1.0",
 		"category": "display-components"
 	},
+	"solana-price": {
+		"title": "Solana Price",
+		"published": true,
+		"createdAt": "2025-03-01T00:00:00Z",
+		"updatedAt": "2025-03-01T00:00:00Z",
+		"description": "A component that displays the current Solana price and market data.",
+		"componentPath": "./screens/solana-price",
+		"hasDataFetch": true,
+		"props": {
+			"price": "Loading...",
+			"change24h": "0"
+		},
+		"tags": ["tailwind", "cryptocurrency", "api"],
+		"author": {
+			"name": "Jovian Dsouza",
+			"github": "Jovian-Dsouza"
+		},
+		"renderSettings": {},
+		"version": "0.1.0",
+		"category": "display-components"
+	},
 	"not-found": {
 		"title": "Not Found Recipe",
 		"published": true,
