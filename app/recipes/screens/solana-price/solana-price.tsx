@@ -46,11 +46,11 @@ export default function SolanaPrice({
 									<div className="w-[120px] h-[120px]">
 										<picture>
 											<source
-												srcSet="https://cryptologos.cc/logos/solana-sol-logo.png"
+												srcSet="https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png"
 												type="image/png"
 											/>
 											<img
-												src="https://cryptologos.cc/logos/solana-sol-logo.png"
+												src="https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png"
 												alt="Solana Logo"
 												width={64}
 												height={64}
