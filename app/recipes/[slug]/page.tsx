@@ -187,7 +187,6 @@ interface CacheItem {
 
 // Extend NodeJS namespace for global variables
 declare global {
-	// eslint-disable-next-line no-var
 	var renderCache: Map<string, CacheItem> | undefined;
 }
 

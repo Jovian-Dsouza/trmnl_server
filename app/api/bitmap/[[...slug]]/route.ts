@@ -25,8 +25,9 @@ import getBitcoinData from "@/app/recipes/screens/bitcoin-price/getData";
 import getSolanaData from "@/app/recipes/screens/solana-price/getData";
 import getTodoistData from "@/app/recipes/screens/todoist/getData";
 
-// Registry mapping recipe IDs to their component and optional data fetcher
-const recipeComponentRegistry: Record<string, React.ComponentType<any>> = {
+// Registry mapping recipe IDs to their component and optional data fetcher.
+// Type assertion used so we can register components with specific prop types.
+const recipeComponentRegistry = {
 	"simple-text": SimpleText,
 	album: Album,
 	"bitmap-patterns": BitmapPatterns,
@@ -35,9 +36,12 @@ const recipeComponentRegistry: Record<string, React.ComponentType<any>> = {
 	"solana-price": SolanaPrice,
 	"not-found": NotFoundScreen,
 	todoist: Todoist,
-};
+} as unknown as Record<string, React.ComponentType<Record<string, unknown>>>;
 
-const recipeDataFetcherRegistry: Record<string, () => Promise<any>> = {
+const recipeDataFetcherRegistry: Record<
+	string,
+	() => Promise<unknown>
+> = {
 	wikipedia: getWikipediaData,
 	"bitcoin-price": getBitcoinData,
 	"solana-price": getSolanaData,
@@ -92,7 +96,6 @@ interface CacheItem {
 
 // Extend NodeJS namespace for global variables
 declare global {
-	// eslint-disable-next-line no-var
 	var bitmapCache: Map<string, CacheItem> | undefined;
 }
 
@@ -204,22 +207,23 @@ const loadRecipeBuffer = cache(async (recipeId: string) => {
 
 						// Check if the fetched data is valid and has required fields
 						if (fetchedData && typeof fetchedData === "object") {
+							const data = fetchedData as Record<string, unknown>;
 							// For Wikipedia specifically, ensure we have valid data
 							if (recipeId === "wikipedia") {
 								const hasValidTitle =
-									fetchedData.title &&
-									typeof fetchedData.title === "string" &&
-									fetchedData.title !== "no data received" &&
-									fetchedData.title.trim().length > 0;
+									data.title &&
+									typeof data.title === "string" &&
+									data.title !== "no data received" &&
+									data.title.trim().length > 0;
 
 								const hasValidExtract =
-									fetchedData.extract &&
-									typeof fetchedData.extract === "string" &&
-									fetchedData.extract !== "Article content is unavailable." &&
-									fetchedData.extract.trim().length > 0;
+									data.extract &&
+									typeof data.extract === "string" &&
+									data.extract !== "Article content is unavailable." &&
+									data.extract.trim().length > 0;
 
 								if (hasValidTitle && hasValidExtract) {
-									props = fetchedData;
+									props = fetchedData as Record<string, unknown>;
 									logger.success(`Valid Wikipedia data loaded for ${recipeId}`);
 								} else {
 									logger.warn(
@@ -229,7 +233,7 @@ const loadRecipeBuffer = cache(async (recipeId: string) => {
 								}
 							} else {
 								// For other recipes, use the data as-is
-								props = fetchedData;
+								props = fetchedData as Record<string, unknown>;
 							}
 						} else {
 							logger.warn(`Invalid or missing data for ${recipeId}`);
