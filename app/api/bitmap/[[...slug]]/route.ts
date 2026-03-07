@@ -9,6 +9,41 @@ import NotFoundScreen from "@/app/recipes/screens/not-found/not-found";
 import screens from "@/app/recipes/screens.json";
 import loadFont from "@/utils/font-loader";
 
+// Static component imports — Turbopack cannot resolve complex dynamic import patterns,
+// so we use a static registry instead of `import(`@/app/recipes/screens/${id}/${id}.tsx`)`.
+import SimpleText from "@/app/recipes/screens/simple-text/simple-text";
+import Album from "@/app/recipes/screens/album/album";
+import BitmapPatterns from "@/app/recipes/screens/bitmap-patterns/bitmap-patterns";
+import Wikipedia from "@/app/recipes/screens/wikipedia/wikipedia";
+import BitcoinPrice from "@/app/recipes/screens/bitcoin-price/bitcoin-price";
+import SolanaPrice from "@/app/recipes/screens/solana-price/solana-price";
+import Todoist from "@/app/recipes/screens/todoist/todoist";
+
+// Static data-fetcher imports for recipes with hasDataFetch: true
+import getWikipediaData from "@/app/recipes/screens/wikipedia/getData";
+import getBitcoinData from "@/app/recipes/screens/bitcoin-price/getData";
+import getSolanaData from "@/app/recipes/screens/solana-price/getData";
+import getTodoistData from "@/app/recipes/screens/todoist/getData";
+
+// Registry mapping recipe IDs to their component and optional data fetcher
+const recipeComponentRegistry: Record<string, React.ComponentType<any>> = {
+	"simple-text": SimpleText,
+	album: Album,
+	"bitmap-patterns": BitmapPatterns,
+	wikipedia: Wikipedia,
+	"bitcoin-price": BitcoinPrice,
+	"solana-price": SolanaPrice,
+	"not-found": NotFoundScreen,
+	todoist: Todoist,
+};
+
+const recipeDataFetcherRegistry: Record<string, () => Promise<any>> = {
+	wikipedia: getWikipediaData,
+	"bitcoin-price": getBitcoinData,
+	"solana-price": getSolanaData,
+	todoist: getTodoistData,
+};
+
 // Generate static params for the bitmap route
 export async function generateStaticParams() {
 	const staticParams = [
@@ -138,76 +173,85 @@ const loadRecipeBuffer = cache(async (recipeId: string) => {
 		// Check if the recipe exists in our components registry
 		let element: React.ReactNode;
 		if (screens[recipeId as keyof typeof screens]) {
-			const { default: Component } = await import(
-				`@/app/recipes/screens/${recipeId}/${recipeId}.tsx`
-			);
-			logger.info(`Recipe component loaded: ${recipeId}`);
-			let props = screens[recipeId as keyof typeof screens].props || {};
-			let hasValidData = true; // Track if we have valid data for data-fetching recipes
+			const Component = recipeComponentRegistry[recipeId];
+			if (!Component) {
+				logger.error(`No component registered for recipe: ${recipeId}`);
+				element = createElement(NotFoundScreen, { slug: recipeId });
+			} else {
+				logger.info(`Recipe component loaded: ${recipeId}`);
+				let props = screens[recipeId as keyof typeof screens].props || {};
+				let hasValidData = true; // Track if we have valid data for data-fetching recipes
 
-			// Handle data fetching recipes
-			if (screens[recipeId as keyof typeof screens].hasDataFetch) {
-				try {
-					const { default: fetchDataFunction } = await import(
-						`@/app/recipes/screens/${recipeId}/getData.ts`
-					);
+				// Handle data fetching recipes
+				if (screens[recipeId as keyof typeof screens].hasDataFetch) {
+					try {
+						const fetchDataFunction = recipeDataFetcherRegistry[recipeId];
 
-					// Set a timeout for data fetching to prevent hanging
-					const fetchPromise = fetchDataFunction();
-					const timeoutPromise = new Promise((_, reject) => {
-						setTimeout(() => reject(new Error("Data fetch timeout")), 10000);
-					});
+						// Set a timeout for data fetching to prevent hanging
+						const fetchPromise = fetchDataFunction();
+						const timeoutPromise = new Promise((_, reject) => {
+							setTimeout(() => reject(new Error("Data fetch timeout")), 10000);
+						});
 
-					// Race between the fetch and the timeout
-					const fetchedData = await Promise.race([
-						fetchPromise,
-						timeoutPromise,
-					]).catch((error) => {
-						logger.warn(`Data fetch error for ${recipeId}:`, error);
-						return null;
-					});
+						// Race between the fetch and the timeout
+						const fetchedData = await Promise.race([
+							fetchPromise,
+							timeoutPromise,
+						]).catch((error) => {
+							logger.warn(`Data fetch error for ${recipeId}:`, error);
+							return null;
+						});
 
-					// Check if the fetched data is valid and has required fields
-					if (fetchedData && typeof fetchedData === "object") {
-						// For Wikipedia specifically, ensure we have valid data
-						if (recipeId === "wikipedia") {
-							const hasValidTitle = fetchedData.title && 
-								typeof fetchedData.title === "string" && 
-								fetchedData.title !== "no data received" &&
-								fetchedData.title.trim().length > 0;
-							
-							const hasValidExtract = fetchedData.extract && 
-								typeof fetchedData.extract === "string" && 
-								fetchedData.extract !== "Article content is unavailable." &&
-								fetchedData.extract.trim().length > 0;
+						// Check if the fetched data is valid and has required fields
+						if (fetchedData && typeof fetchedData === "object") {
+							// For Wikipedia specifically, ensure we have valid data
+							if (recipeId === "wikipedia") {
+								const hasValidTitle =
+									fetchedData.title &&
+									typeof fetchedData.title === "string" &&
+									fetchedData.title !== "no data received" &&
+									fetchedData.title.trim().length > 0;
 
-							if (hasValidTitle && hasValidExtract) {
-								props = fetchedData;
-								logger.success(`Valid Wikipedia data loaded for ${recipeId}`);
+								const hasValidExtract =
+									fetchedData.extract &&
+									typeof fetchedData.extract === "string" &&
+									fetchedData.extract !== "Article content is unavailable." &&
+									fetchedData.extract.trim().length > 0;
+
+								if (hasValidTitle && hasValidExtract) {
+									props = fetchedData;
+									logger.success(`Valid Wikipedia data loaded for ${recipeId}`);
+								} else {
+									logger.warn(
+										`Invalid Wikipedia data for ${recipeId} - missing required fields`,
+									);
+									hasValidData = false; // Mark as invalid to use NotFoundScreen
+								}
 							} else {
-								logger.warn(`Invalid Wikipedia data for ${recipeId} - missing required fields`);
-								hasValidData = false; // Mark as invalid to use NotFoundScreen
+								// For other recipes, use the data as-is
+								props = fetchedData;
 							}
 						} else {
-							// For other recipes, use the data as-is
-							props = fetchedData;
+							logger.warn(`Invalid or missing data for ${recipeId}`);
+							hasValidData = false; // Mark as invalid to use NotFoundScreen
 						}
-					} else {
-						logger.warn(`Invalid or missing data for ${recipeId}`);
+					} catch (error) {
+						logger.warn(`Error in data fetching for ${recipeId}:`, error);
 						hasValidData = false; // Mark as invalid to use NotFoundScreen
 					}
-				} catch (error) {
-					logger.warn(`Error in data fetching for ${recipeId}:`, error);
-					hasValidData = false; // Mark as invalid to use NotFoundScreen
 				}
-			}
 
-			// Only render the component if we have valid data, otherwise use NotFoundScreen
-			if (hasValidData) {
-				element = createElement(Component, { ...props });
-			} else {
-				logger.info(`Using NotFoundScreen for ${recipeId} due to invalid data`);
-				element = createElement(NotFoundScreen, { slug: `${recipeId} - Data Unavailable` });
+				// Only render the component if we have valid data, otherwise use NotFoundScreen
+				if (hasValidData) {
+					element = createElement(Component, { ...props });
+				} else {
+					logger.info(
+						`Using NotFoundScreen for ${recipeId} due to invalid data`,
+					);
+					element = createElement(NotFoundScreen, {
+						slug: `${recipeId} - Data Unavailable`,
+					});
+				}
 			}
 		} else {
 			// If recipe component not found, use the NotFoundScreen

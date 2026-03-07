@@ -46,7 +46,13 @@ export async function createClient(): Promise<{
 			getAll() {
 				return cookieStore.getAll();
 			},
-			setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+			setAll(
+				cookiesToSet: {
+					name: string;
+					value: string;
+					options?: Record<string, unknown>;
+				}[],
+			) {
 				try {
 					// Use for...of instead of forEach
 					for (const { name, value, options } of cookiesToSet) {

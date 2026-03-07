@@ -138,5 +138,25 @@
 		},
 		"version": "1.0.0",
 		"category": "system-components"
+	},
+	"todoist": {
+		"title": "Todoist Tasks",
+		"published": true,
+		"createdAt": "2025-03-01T00:00:00Z",
+		"updatedAt": "2025-03-01T00:00:00Z",
+		"description": "Displays today's tasks from Todoist.",
+		"componentPath": "./screens/todoist",
+		"hasDataFetch": true,
+		"props": {
+			"tasks": []
+		},
+		"tags": ["productivity", "todoist", "api"],
+		"author": {
+			"name": "Jovian Dsouza",
+			"github": "Jovian-Dsouza"
+		},
+		"renderSettings": {},
+		"version": "0.1.0",
+		"category": "display-components"
 	}
 }
